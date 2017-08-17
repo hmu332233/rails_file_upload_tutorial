@@ -44,15 +44,17 @@ class ImageUploader < CarrierWave::Uploader::Base
   # Create different versions of your uploaded files:
   # 이미지를 업로드할 때 원본말고도 thumb 버젼으로 업로드를 하나 더 한다는 것
   version :thumb do
-    process resize_to_fit: [50, 50]
+    process resize_to_fit: [50, 50] # 비율 그대로 가져옴
+    # process resize_to_fill: [50, 50] # 입력된 수치로 절대적으로 파일 크기를 수정함
   end
 end
 ```
+### model에 사진을 넣기 위한 준비
 다음을 `/config/initializers/carrierwave.rb` 파일을 추가한 후 붙여넣는다
 ```ruby
 require 'carrierwave/orm/activerecord'
 ```
-### model 준비
+### model 생성
 ```bash
 $ rails g model title:string content:string image:string
 ```
@@ -73,4 +75,38 @@ version이 추가되어있다면 다음과 같은 방법으로 사진을 출력 
 `thumb`는 uploader에 version으로 지정한 이름을 써주면 된다
 ```ruby
 <%= image_tag post.thumb.image.url %>
+```
+예를들어 likelion 버전의 url을 가져오고 싶으면  
+`post.likelion.image.url`이 된다
+
+
+### aws로 업로드하기
+`/config/initializers/carrierwave.rb` 파일에 다음의 내용을 추가한다
+```ruby
+CarrierWave.configure do |config|
+  config.fog_provider = 'fog/aws'            
+  config.fog_credentials = {
+    provider:              'AWS',                     
+    aws_access_key_id:     "#{ENV['AWS_KEY']}",                   
+    aws_secret_access_key: "#{ENV['AWS_SECRET']}",               
+    region:                'ap-northeast-2', 
+  }
+  config.fog_directory  = 'name_of_directory'                   
+end
+```
+환경변수는 다음과 같이 등록이 가능하다
+```bash
+$ echo "export AWS_KEY=키 값" >> ~/.profile
+$ echo "export AWS_SECRET=키 값" >> ~/.profile
+$ source ~/.profile
+```
+다음과 같이 입력했을때 값이 뜬다면 성공
+```bash
+$ echo $AWS_KEY
+```
+image uploader의 `storage`를 `fog`로 변경한다
+```ruby
+# Choose what kind of storage to use for this uploader:
+# storage :file
+storage :fog
 ```
